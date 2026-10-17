@@ -1,0 +1,231 @@
+/* Sati palette. Aqua is an accent only (never text); status colors are for status only. */
+:root {
+  --sati-space: #0f3575;
+  --sati-azure: #266bff;
+  --sati-aqua: #8bffff;
+  --platinum: #e7ebf0;
+  --charcoal: #36454f;
+  --white: #ffffff;
+  --success: #00b894;
+  --warning: #f59e0b;
+  --error: #e5484d;
+
+  --font: "Neulis Sans", "Aktiv Grotesk", Inter, "Noto Sans Thai", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--charcoal);
+  background: var(--platinum);
+  line-height: 1.5;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  color: var(--white);
+  background: var(--sati-space);
+  border-bottom: 4px solid var(--sati-aqua);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+main {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 0 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgb(15 53 117 / 12%);
+}
+
+.card.narrow {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: var(--sati-space);
+}
+
+form,
+.toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.toolbar {
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+input,
+select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid #b8c2cc;
+  border-radius: 8px;
+  color: var(--charcoal);
+  background: var(--white);
+}
+
+button {
+  font: inherit;
+  font-weight: 500;
+  padding: 8px 16px;
+  border: 1px solid var(--sati-azure);
+  border-radius: 8px;
+  color: var(--sati-azure);
+  background: var(--white);
+  cursor: pointer;
+}
+
+button.primary {
+  color: var(--white);
+  background: var(--sati-azure);
+}
+
+button.ghost {
+  color: var(--white);
+  border-color: var(--white);
+  background: transparent;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 3px solid var(--sati-azure);
+  outline-offset: 2px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab {
+  border-color: var(--platinum);
+  color: var(--charcoal);
+}
+
+.tab.active {
+  color: var(--white);
+  border-color: var(--sati-space);
+  background: var(--sati-space);
+}
+
+.banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  background: var(--platinum);
+  font-size: 0.9rem;
+}
+
+.banner.error {
+  border-color: var(--error);
+}
+
+.banner.success {
+  border-color: var(--success);
+}
+
+.banner.warning {
+  border-color: var(--warning);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.facts dt {
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--platinum);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--sati-space);
+  font-weight: 600;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.schema {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--platinum);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+  }
+}

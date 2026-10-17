@@ -50,6 +50,45 @@ Or everything in Docker: `docker-compose up --build`.
 
 Success responses are the bare payload; errors are `{"trace_id": "...", "message": "..."}`.
 
+## Web UI (React + TypeScript)
+
+`frontend/` is a small console built with Vite + React + TypeScript: log in / register, profile,
+and a data browser for `users` and `user-permissions` (pagination and schema view). Styled with the
+Sati palette. It only calls the existing API; nothing new on the backend except serving the build.
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173/ui/  (proxies /api to http://127.0.0.1:3000)
+npm run build        # writes frontend/dist, which FastAPI then serves at /ui
+npm test             # Vitest + Testing Library + MSW (no backend needed)
+```
+
+After `npm run build`, start the API and open http://localhost:3000/ui/. If `frontend/dist` does
+not exist the API still starts; only `/ui` is missing. Set `GOAPP_FRONTEND_DIST` to serve a build
+from another folder.
+
+### Mock data and mock cases
+
+```bash
+python -m app.mock.seed --yes   # 3 users + 27 permission rows, safe to run twice
+```
+
+| User | Permission rows |
+|---|---|
+| `admin@example.com` | `admin` + 25 `report:NN` rows (enough to page through) |
+| `viewer@example.com` | `viewer` |
+| `nopermission@example.com` | none |
+
+Every mock user has the password `Passw0rd!`. Never seed them into a shared or production database;
+the script prints the target database and refuses to write without `--yes`.
+
+Mock cases (same ids on both sides where the scenario exists in both):
+- `tests/test_mock_cases.py`: API scenarios against the seeded data (wrong password, expired or
+  tampered token, token revoked by a newer login, refresh, logout, pagination edge cases, ...).
+- `frontend/src/mockCases.test.tsx`: UI scenarios against a fake backend (login and register
+  errors, token refresh and expiry, session restore, paging, schema view, server down, ...).
+
 ## Add a model to the generic CRUD
 
 Add a `CrudResource` to `src/app/infrastructure/api/registry.py`. The slug is the table name with
@@ -58,7 +97,7 @@ Add a `CrudResource` to `src/app/infrastructure/api/registry.py`. The slug is th
 ## Tests
 
 ```bash
-pytest                      # unit + API tests (SQLite in memory, mongomock)
+pytest                      # unit, API and mock-case tests (SQLite in memory, mongomock)
 ruff check . && mypy src
 ```
 
