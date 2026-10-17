@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     goapp_mongodb_db_atlas_uri: str = ""
     goapp_mongodb_db_name: str = ""
 
+    # Built React app; served at /ui when the folder exists. Empty = <repo>/frontend/dist.
+    goapp_frontend_dist: str = ""
+
     goapp_secret_key: str
     goapp_jwt_access_expires: int = 86400
     goapp_jwt_refresh_expires: int = 172800
