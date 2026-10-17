@@ -7,8 +7,11 @@ from app.config import Settings
 from app.domain.entities.user import UserEntity
 from app.domain.errors import AuthError
 from app.infrastructure.api.errors import ApiError
+from app.infrastructure.api.registry import CRUD_RESOURCES
+from app.interface.repositories.crud_factory import CrudRepositoryFactory
 from app.interface.repositories.postgres_user import PostgresUserRepository
 from app.shared.security import TokenService
+from app.usecases.crud import CrudUsecase
 from app.usecases.user import UserUsecase
 
 
@@ -36,3 +39,7 @@ def require_user(request: Request, usecase: UserUsecase = Depends(get_user_useca
         raise ApiError(401, "middlware-002", str(exc)) from exc
     request.state.user_permission = permission
     return user
+
+
+def get_crud_usecase(session: Session = Depends(get_session)) -> CrudUsecase:
+    return CrudUsecase(CrudRepositoryFactory(CRUD_RESOURCES, session))

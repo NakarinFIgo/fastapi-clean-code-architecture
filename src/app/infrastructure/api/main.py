@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.config import Settings
 from app.infrastructure.api.errors import install_error_handlers
 from app.infrastructure.db.postgres import build_session_factory
+from app.interface.handlers.crud import build_crud_router
 from app.interface.handlers.monitor import build_monitor_router
 from app.interface.handlers.user import build_user_router
 
@@ -30,5 +31,6 @@ def create_app(
     api_v1 = APIRouter(prefix="/api/v1")
     api_v1.include_router(build_monitor_router(settings))
     api_v1.include_router(build_user_router())
+    api_v1.include_router(build_crud_router())
     app.include_router(api_v1)
     return app
