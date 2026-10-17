@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import Settings
 from app.infrastructure.api.errors import install_error_handlers
+from app.infrastructure.db.mongo import build_mongo_database
 from app.infrastructure.db.postgres import build_session_factory
 from app.interface.handlers.crud import build_crud_router
 from app.interface.handlers.monitor import build_monitor_router
@@ -14,10 +15,13 @@ def create_app(
     settings: Settings | None = None,
     session_factory: sessionmaker[Session] | None = None,
 ) -> FastAPI:
-    settings = settings or Settings()  # type: ignore[call-arg]
+    settings = settings or Settings()
     app = FastAPI(title=settings.goapp_name, version=settings.goapp_version)
     app.state.settings = settings
     app.state.session_factory = session_factory or build_session_factory(settings.postgres_url)
+    app.state.mongo_db = build_mongo_database(
+        settings.goapp_mongodb_db_atlas_uri, settings.goapp_mongodb_db_name
+    )
 
     app.add_middleware(
         CORSMiddleware,

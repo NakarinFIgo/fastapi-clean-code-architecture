@@ -23,7 +23,8 @@ def describe_resource(resource: CrudResource) -> dict[str, Any]:
     """Avro-like record description, same shape as Go's GenerateAvroSchema."""
     fields: list[dict[str, str]] = []
     if hasattr(resource.model, "__table__"):
-        for column in inspect(resource.model).columns:
+        columns: Any = inspect(resource.model).columns
+        for column in columns:
             if column.key not in resource.hidden:
                 fields.append({"name": column.key, "type": _sa_type(column.type)})
     else:  # pydantic document model (Mongo)

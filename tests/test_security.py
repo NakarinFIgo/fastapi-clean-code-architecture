@@ -84,8 +84,6 @@ def test_parse_errors_use_go_messages(settings):
 
 
 def test_parse_rejects_token_without_claims(settings):
-    token = jwt.encode(
-        {"exp": int(time.time()) + 100}, settings.goapp_secret_key, "HS256"
-    )
+    token = jwt.encode({"exp": int(time.time()) + 100}, settings.goapp_secret_key, "HS256")
     with pytest.raises(TokenError, match="claims type is invalid"):
         TokenService(settings).parse(token)

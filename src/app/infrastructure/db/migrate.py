@@ -10,6 +10,6 @@ def create_tables(engine: Engine) -> None:
 
 
 if __name__ == "__main__":
-    engine = create_engine(Settings().postgres_url)  # type: ignore[call-arg]
+    engine = create_engine(Settings().postgres_url)
     create_tables(engine)
     print("Migration success !!!")

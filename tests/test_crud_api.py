@@ -28,7 +28,14 @@ def test_list_shape_and_no_password(client, h):
     assert r.status_code == 200
     body = r.json()
     assert set(body) == {
-        "code", "data", "page", "page_size", "total_page", "total_data", "message", "data_schema",
+        "code",
+        "data",
+        "page",
+        "page_size",
+        "total_page",
+        "total_data",
+        "message",
+        "data_schema",
     }
     assert body["page"] == 1 and body["page_size"] == 10
     assert body["data"][0]["email"] == CREDS["email"]

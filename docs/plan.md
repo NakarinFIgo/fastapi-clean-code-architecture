@@ -1,3 +1,8 @@
+> **Status: implemented.** Decision after writing this plan: keep strict parity with Go. So deviations 1, 2 and 3
+> below were NOT applied (refresh uses ACCESS_EXPIRES, duplicate email and >72-byte password return 500, Postgres
+> list totals count rows on the page). Deviations 4 and 5 were kept, plus `_pageSize < 1` falls back to 10.
+> See README "Known differences from the Go project" for the final list.
+
 # Python (FastAPI) Port Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -423,7 +428,9 @@ def test_verify_password_with_garbage_hash_is_false():
 def test_token_payload_matches_go_shape(settings):
     svc = TokenService(settings)
     token = svc.sign(TokenType.ACCESS, 7)
-    payload = jwt.decode(token, settings.goapp_secret_key, algorithms=["HS256"], options={"verify_aud": False})
+    payload = jwt.decode(
+        token, settings.goapp_secret_key, algorithms=["HS256"], options={"verify_aud": False}
+    )
     assert payload["claims"] == {"id": 7}
     assert payload["sub"] == "access-token"
     assert payload["aud"] == ["user", "admin"]
@@ -435,7 +442,9 @@ def test_token_payload_matches_go_shape(settings):
 def test_refresh_token_uses_refresh_lifetime(settings):
     svc = TokenService(settings)
     token = svc.sign(TokenType.REFRESH, 7)
-    payload = jwt.decode(token, settings.goapp_secret_key, algorithms=["HS256"], options={"verify_aud": False})
+    payload = jwt.decode(
+        token, settings.goapp_secret_key, algorithms=["HS256"], options={"verify_aud": False}
+    )
     assert payload["sub"] == "refresh-token"
     assert payload["exp"] - payload["iat"] == settings.goapp_jwt_refresh_expires
 
@@ -743,7 +752,9 @@ class UserModel(Base):
     last_name: Mapped[str] = mapped_column(String, default="")
     password: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
 
 
 class UserTokenModel(Base):
@@ -755,7 +766,9 @@ class UserTokenModel(Base):
     )
     access: Mapped[str] = mapped_column(String, default="")
     refresh: Mapped[str] = mapped_column(String, default="")
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
     user: Mapped[UserModel | None] = relationship()
 
 
@@ -767,7 +780,9 @@ class UserPermissionModel(Base):
         ForeignKey("users.id", onupdate="CASCADE", ondelete="SET NULL"), index=True
     )
     permission: Mapped[str] = mapped_column(String, default="")
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
 ```
 
 `src/app/domain/entities/user.py`
@@ -823,7 +838,9 @@ from app.domain.models.user import UserModel, UserPermissionModel, UserTokenMode
 
 class IUserRepository(ABC):
     @abstractmethod
-    def insert_user(self, email: str, password_hash: str, first_name: str, last_name: str) -> UserModel: ...
+    def insert_user(
+        self, email: str, password_hash: str, first_name: str, last_name: str
+    ) -> UserModel: ...
 
     @abstractmethod
     def get_by_email(self, email: str) -> UserModel | None: ...
@@ -864,8 +881,12 @@ class PostgresUserRepository(IUserRepository):
     def __init__(self, session: Session) -> None:
         self._s = session
 
-    def insert_user(self, email: str, password_hash: str, first_name: str, last_name: str) -> UserModel:
-        user = UserModel(email=email, password=password_hash, first_name=first_name, last_name=last_name)
+    def insert_user(
+        self, email: str, password_hash: str, first_name: str, last_name: str
+    ) -> UserModel:
+        user = UserModel(
+            email=email, password=password_hash, first_name=first_name, last_name=last_name
+        )
         self._s.add(user)
         try:
             self._s.commit()
@@ -1242,7 +1263,12 @@ def client(settings, session_factory) -> TestClient:
 import pytest
 
 BASE = "/api/v1/users"
-CREDS = {"email": "ann@example.com", "password": "pw123456", "first_name": "Ann", "last_name": "Lee"}
+CREDS = {
+    "email": "ann@example.com",
+    "password": "pw123456",
+    "first_name": "Ann",
+    "last_name": "Lee",
+}
 
 
 def register(client, **overrides):
@@ -1250,7 +1276,9 @@ def register(client, **overrides):
 
 
 def login(client):
-    return client.post(f"{BASE}/login", json={"email": CREDS["email"], "password": CREDS["password"]})
+    return client.post(
+        f"{BASE}/login", json={"email": CREDS["email"], "password": CREDS["password"]}
+    )
 
 
 def auth(token):
@@ -1316,8 +1344,14 @@ def test_profile_requires_valid_token(client):
 
 @pytest.mark.parametrize(
     "headers",
-    [{}, {"Authorization": "Bearer"}, {"Authorization": "Bearer "}, {"Authorization": "bearer abc"},
-     {"Authorization": "Bearer abc"}, {"Authorization": "Basic abc"}],
+    [
+        {},
+        {"Authorization": "Bearer"},
+        {"Authorization": "Bearer "},
+        {"Authorization": "bearer abc"},
+        {"Authorization": "Bearer abc"},
+        {"Authorization": "Basic abc"},
+    ],
 )
 def test_profile_bad_auth_header_is_401_envelope(client, headers):
     # Review focus: never 422/500, always the error envelope.
@@ -1434,7 +1468,9 @@ def build_user_router() -> APIRouter:
     router = APIRouter(prefix="/users", tags=["User"])
 
     @router.post("/register", status_code=201, response_model=UserEntity)
-    def register(req: UserRegisterRequest, usecase: UserUsecase = Depends(get_user_usecase)) -> UserEntity:
+    def register(
+        req: UserRegisterRequest, usecase: UserUsecase = Depends(get_user_usecase)
+    ) -> UserEntity:
         try:
             return usecase.register(req)
         except ConflictError as exc:
@@ -1443,14 +1479,18 @@ def build_user_router() -> APIRouter:
             raise ApiError(400, REGISTER_ERROR, str(exc)) from exc
 
     @router.post("/login", response_model=UserLoginResponse)
-    def login(req: UserLoginRequest, usecase: UserUsecase = Depends(get_user_usecase)) -> UserLoginResponse:
+    def login(
+        req: UserLoginRequest, usecase: UserUsecase = Depends(get_user_usecase)
+    ) -> UserLoginResponse:
         try:
             return usecase.login(req)
         except DomainError as exc:
             raise ApiError(400, LOGIN_ERROR, str(exc)) from exc
 
     @router.post("/logout")
-    def logout(req: UserRefreshTokenRequest, usecase: UserUsecase = Depends(get_user_usecase)) -> None:
+    def logout(
+        req: UserRefreshTokenRequest, usecase: UserUsecase = Depends(get_user_usecase)
+    ) -> None:
         try:
             usecase.logout(req)
         except DomainError as exc:
@@ -1609,13 +1649,20 @@ import pytest
 
 from app.domain.models.user import UserPermissionModel
 
-CREDS = {"email": "ann@example.com", "password": "pw123456", "first_name": "Ann", "last_name": "Lee"}
+CREDS = {
+    "email": "ann@example.com",
+    "password": "pw123456",
+    "first_name": "Ann",
+    "last_name": "Lee",
+}
 
 
 @pytest.fixture
 def token(client):
     client.post("/api/v1/users/register", json=CREDS)
-    r = client.post("/api/v1/users/login", json={"email": CREDS["email"], "password": CREDS["password"]})
+    r = client.post(
+        "/api/v1/users/login", json={"email": CREDS["email"], "password": CREDS["password"]}
+    )
     return r.json()["token"]["access"]
 
 
@@ -1632,7 +1679,16 @@ def test_list_shape_and_no_password(client, h):
     r = client.get("/api/v1/data/users/", headers=h)
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"code", "data", "page", "page_size", "total_page", "total_data", "message", "data_schema"}
+    assert set(body) == {
+        "code",
+        "data",
+        "page",
+        "page_size",
+        "total_page",
+        "total_data",
+        "message",
+        "data_schema",
+    }
     assert body["page"] == 1 and body["page_size"] == 10
     assert body["total_data"] == 1 and body["total_page"] == 1
     assert body["data"][0]["email"] == CREDS["email"]
@@ -1652,7 +1708,9 @@ def test_list_pagination_counts_are_real(client, session_factory, h):
     assert body["page"] == 2
 
 
-@pytest.mark.parametrize("qs", ["_pageSize=-5", "_pageSize=0", "_pageSize=abc", "_page=0", "_page=abc"])
+@pytest.mark.parametrize(
+    "qs", ["_pageSize=-5", "_pageSize=0", "_pageSize=abc", "_page=0", "_page=abc"]
+)
 def test_list_bad_pagination_is_clamped(client, h, qs):
     r = client.get(f"/api/v1/data/users/?{qs}", headers=h)
     assert r.status_code == 200
@@ -1850,9 +1908,7 @@ class PostgresCrudRepository(ICrudRepository):
 
     def _serialize(self, row: Any) -> dict[str, Any]:
         return {
-            c.key: getattr(row, c.key)
-            for c in row.__table__.columns
-            if c.key not in self._r.hidden
+            c.key: getattr(row, c.key) for c in row.__table__.columns if c.key not in self._r.hidden
         }
 
     def get_one_by_id(self, id: str) -> DataResponse:
@@ -2003,7 +2059,9 @@ def build_crud_router() -> APIRouter:
             raise ApiError(400, "error", str(exc)) from exc
 
     @router.get("/{slug}/{id}", response_model=DataResponse)
-    def retrieve(slug: str, id: str, usecase: CrudUsecase = Depends(get_crud_usecase)) -> DataResponse:
+    def retrieve(
+        slug: str, id: str, usecase: CrudUsecase = Depends(get_crud_usecase)
+    ) -> DataResponse:
         try:
             return usecase.retrieve(slug, id)
         except DomainError as exc:
@@ -2275,6 +2333,7 @@ git commit -m "feat(python): Mongo CRUD repository behind the same factory"
 
 Both servers must point at the SAME Postgres and share GOAPP_SECRET_KEY / GOAPP_NAME.
 """
+
 import os
 import uuid
 
@@ -2302,8 +2361,12 @@ def shape(value):
 
 @pytest.fixture(scope="module")
 def creds():
-    return {"email": f"parity-{uuid.uuid4().hex[:8]}@example.com", "password": "pw123456",
-            "first_name": "P", "last_name": "T"}
+    return {
+        "email": f"parity-{uuid.uuid4().hex[:8]}@example.com",
+        "password": "pw123456",
+        "first_name": "P",
+        "last_name": "T",
+    }
 
 
 def test_user_registered_in_go_can_login_in_python_and_vice_versa(creds):

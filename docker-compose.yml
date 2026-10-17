@@ -1,0 +1,30 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: golang-first-api
+    ports:
+      - "5432:5432"
+
+  mongodb:
+    image: mongo:6.0.8
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: golang-first-api
+
+  api:
+    build: .
+    env_file: .env.dev
+    environment:
+      GOAPP_POSTGRES_DB_HOST: db
+      GOAPP_MONGODB_DB_ATLAS_URI: mongodb://root:golang-first-api@mongodb:27017/?authSource=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - mongodb

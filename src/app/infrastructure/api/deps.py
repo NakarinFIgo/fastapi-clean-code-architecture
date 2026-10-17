@@ -41,5 +41,5 @@ def require_user(request: Request, usecase: UserUsecase = Depends(get_user_useca
     return user
 
 
-def get_crud_usecase(session: Session = Depends(get_session)) -> CrudUsecase:
-    return CrudUsecase(CrudRepositoryFactory(CRUD_RESOURCES, session))
+def get_crud_usecase(request: Request, session: Session = Depends(get_session)) -> CrudUsecase:
+    return CrudUsecase(CrudRepositoryFactory(CRUD_RESOURCES, session, request.app.state.mongo_db))

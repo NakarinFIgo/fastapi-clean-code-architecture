@@ -33,6 +33,9 @@ addopts = "-m 'not contract'"
 line-length = 100
 src = ["src", "tests"]
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

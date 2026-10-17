@@ -1,6 +1,14 @@
+from collections.abc import Iterator
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.config import Settings
+from app.domain.models.user import Base
+from app.infrastructure.api.main import create_app
 
 
 @pytest.fixture
@@ -13,15 +21,6 @@ def settings() -> Settings:
         goapp_jwt_access_expires=86400,
         goapp_jwt_refresh_expires=172800,
     )
-
-
-from collections.abc import Iterator  # noqa: E402
-
-from sqlalchemy import create_engine  # noqa: E402
-from sqlalchemy.orm import Session, sessionmaker  # noqa: E402
-from sqlalchemy.pool import StaticPool  # noqa: E402
-
-from app.domain.models.user import Base  # noqa: E402
 
 
 @pytest.fixture
@@ -40,11 +39,6 @@ def session(session_factory: sessionmaker[Session]) -> Iterator[Session]:
         yield s
 
 
-from fastapi.testclient import TestClient  # noqa: E402
-
-from app.infrastructure.api.main import create_app  # noqa: E402
-
-
 @pytest.fixture
-def client(settings, session_factory) -> TestClient:
+def client(settings: Settings, session_factory: sessionmaker[Session]) -> TestClient:
     return TestClient(create_app(settings, session_factory=session_factory))

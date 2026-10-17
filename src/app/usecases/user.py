@@ -35,9 +35,7 @@ class UserUsecase:
             raise ValidationError("email pattern is invalid")
         if len(req.password.encode()) > BCRYPT_MAX_BYTES:
             # Go surfaces bcrypt's error as a generic failure (HTTP 500), not a validation one.
-            raise DomainError(
-                "hashed password failed: bcrypt: password length exceeds 72 bytes"
-            )
+            raise DomainError("hashed password failed: bcrypt: password length exceeds 72 bytes")
         user = self._repo.insert_user(
             req.email, hash_password(req.password), req.first_name, req.last_name
         )
