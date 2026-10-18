@@ -1,124 +1,83 @@
-## FastAPI Clean Architecture Template
+# FastAPI Clean Architecture
 
-Python port of [golang-clean-code-architecture](../golang-clean-code-architecture). Same Clean
-Architecture layers, same routes, same JSON shapes, same JWT tokens and Postgres tables, so the two
-services can run side by side against one database.
+เขียน [golang-clean-code-architecture](../golang-clean-code-architecture) ใหม่เป็น Python (FastAPI)
+route, JSON, JWT และตาราง Postgres เหมือนต้นฉบับ
 
-Stack: FastAPI, SQLAlchemy 2 (PostgreSQL), PyMongo (MongoDB), pydantic-settings, PyJWT, bcrypt.
+## โครงสร้างโค้ด
 
-## Project structure
+1. `02_backend/` คือ API ด้วย FastAPI, `01_frontend/` คือหน้า console ด้วย React + TypeScript
+2. `02_backend/src/app` แบ่งเป็น 4 ชั้นตาม Clean Architecture
+   - `domain`: entity, SQLAlchemy model, interface ของ repository (ABC) และ error ไม่ import ชั้นอื่นเลย
+   - `usecases`: business logic (`user`, `crud`) คุยกับ repository ผ่าน interface เท่านั้น
+   - `interface`: `handlers` คือ FastAPI router และ `repositories` คือตัวเขียนจริงของ Postgres/Mongo
+   - `infrastructure`: ต่อสายทุกอย่างเข้าด้วยกัน (app factory, dependency injection, session ของ DB, migrate)
+3. Dependency ชี้เข้าด้านในเสมอ `infrastructure` → `interface` → `usecases` → `domain` ทำให้เปลี่ยน DB หรือ framework ได้โดยไม่แตะ business logic
+4. `shared` เก็บ helper ที่ใช้ร่วมกัน (JWT, bcrypt, slug, schema)
+5. Generic CRUD: เพิ่ม `CrudResource` ใน `infrastructure/api/registry.py` ที่เดียว ก็ได้ endpoint `/api/v1/data/{slug}/` ของ model นั้น โดยเลือก datasource ได้ทั้ง Postgres และ Mongo
+6. ที่ตั้งใจต่างจากต้นฉบับ Go
+   - ไม่เปิด `user_tokens` ผ่าน CRUD เพราะ user ที่ login แล้วจะอ่าน token ของทุกคนได้
+   - user ที่ไม่มีแถวใน `user_permissions` ใช้ CRUD ได้ (ต้นฉบับ Go panic)
+   - `_pageSize` ต่ำกว่า 1 ใช้ค่า 10 แทนการส่งค่าติดลบให้ DB
+7. Test อยู่ใน `02_backend/tests` ใช้ SQLite in-memory กับ mongomock จึงรันได้โดยไม่ต้องเปิด DB
+8. `01_frontend/src` แบ่งตาม feature (`features/auth`, `features/data_browser`) ส่วนของที่ใช้ร่วมกันอยู่ใน `shared/`
 
-```
-src/app
- |-config.py                        Settings (GOAPP_* env vars, same names as the Go project)
- |-domain
-    |-entities                      pydantic request/response objects
-    |-models                        SQLAlchemy models (users, user_tokens, user_permissions)
-    |-repositories                  repository interfaces (ABC)
-    |-errors.py
- |-usecases                         business logic (user, crud)
- |-interface
-    |-handlers                      FastAPI routers (monitor, user, crud)
-    |-repositories                  postgres / mongo repository implementations
- |-infrastructure
-    |-api                           app factory, dependency wiring, error handlers, CRUD registry
-    |-db                            postgres session factory, mongo client, table creation
- |-shared                           JWT + bcrypt, slug and schema helpers
-```
+## Run the project
 
-Dependencies point inward: `domain` imports nothing from the other layers.
+Requirements: Python 3.12+, Node.js, Docker.
 
-## Setup
+### 1. Start the databases
 
-1. `cp .env.template .env.dev` and edit values (change `GOAPP_SECRET_KEY`).
-2. Start databases: `docker-compose up db mongodb`
-3. Install: `python3.12 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]"`
-4. Create tables: `python -m app.infrastructure.db.migrate`
-5. Run: `uvicorn app.infrastructure.api.main:create_app --factory --port 3000 --reload`
-6. API docs: http://localhost:3000/docs
-
-Or everything in Docker: `docker-compose up --build`.
-
-## Endpoints (all under `/api/v1`)
-
-| Method | Path | Auth |
-|---|---|---|
-| GET | `/` | no |
-| POST | `/users/register` `/users/login` `/users/logout` `/users/refresh-token` | no |
-| POST | `/users/profile` | JWT |
-| GET | `/data/{slug}/describe` `/data/{slug}/` `/data/{slug}/{id}` | JWT |
-
-Success responses are the bare payload; errors are `{"trace_id": "...", "message": "..."}`.
-
-## Web UI (React + TypeScript)
-
-`frontend/` is a small console built with Vite + React + TypeScript: log in / register, profile,
-and a data browser for `users` and `user-permissions` (pagination and schema view). Styled with the
-Sati palette. It only calls the existing API; nothing new on the backend except serving the build.
+From the repo root:
 
 ```bash
-cd frontend
+docker-compose up db mongodb
+```
+
+### 2. Backend
+
+```bash
+cd 02_backend
+cp env.template .env.dev         # rename the template, then edit values (change GOAPP_SECRET_KEY)
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+python -m app.infrastructure.db.migrate          # create tables
+python -m app.mock.seed --yes                    # optional: mock users and data
+uvicorn app.infrastructure.api.main:create_app --factory --port 3000 --reload
+```
+
+API docs: http://localhost:3000/docs
+
+### 3. Frontend
+
+In a new terminal:
+
+```bash
+cd 01_frontend
+cp env.template .env             # rename the template; API address and proxy target live here
 npm install
-npm run dev          # http://localhost:5173/ui/  (proxies /api to http://127.0.0.1:3000)
-npm run build        # writes frontend/dist, which FastAPI then serves at /ui
-npm test             # Vitest + Testing Library + MSW (no backend needed)
+npm run dev                      # http://localhost:5173/ui/ (proxies /api to :3000)
 ```
 
-After `npm run build`, start the API and open http://localhost:3000/ui/. If `frontend/dist` does
-not exist the API still starts; only `/ui` is missing. Set `GOAPP_FRONTEND_DIST` to serve a build
-from another folder.
-
-### Mock data and mock cases
+Or build it and let FastAPI serve it at http://localhost:3000/ui/:
 
 ```bash
-python -m app.mock.seed --yes   # 3 users + 27 permission rows, safe to run twice
+npm run build
 ```
 
-| User | Permission rows |
-|---|---|
-| `admin@example.com` | `admin` + 25 `report:NN` rows (enough to page through) |
-| `viewer@example.com` | `viewer` |
-| `nopermission@example.com` | none |
+Mock users (after seeding): `admin@example.com`, `viewer@example.com`, `nopermission@example.com`.
+Password for all: `Passw0rd!`.
 
-Every mock user has the password `Passw0rd!`. Never seed them into a shared or production database;
-the script prints the target database and refuses to write without `--yes`.
-
-Mock cases (same ids on both sides where the scenario exists in both):
-- `tests/test_mock_cases.py`: API scenarios against the seeded data (wrong password, expired or
-  tampered token, token revoked by a newer login, refresh, logout, pagination edge cases, ...).
-- `frontend/src/mockCases.test.tsx`: UI scenarios against a fake backend (login and register
-  errors, token refresh and expiry, session restore, paging, schema view, server down, ...).
-
-## Add a model to the generic CRUD
-
-Add a `CrudResource` to `src/app/infrastructure/api/registry.py`. The slug is the table name with
-`_` replaced by `-`. Mongo resources use `Datasource.MONGODB` and a pydantic model.
-
-## Tests
+### Everything in Docker
 
 ```bash
-pytest                      # unit, API and mock-case tests (SQLite in memory, mongomock)
-ruff check . && mypy src
+cp 02_backend/env.template 02_backend/.env.dev
+docker-compose up --build
 ```
 
-Parity check against the Go service (needs both running on the same Postgres, same
-`GOAPP_SECRET_KEY` and `GOAPP_NAME`):
+### Tests
 
 ```bash
-GO_URL=http://127.0.0.1:3000 PY_URL=http://127.0.0.1:3001 pytest -m contract tests/contract
+cd 02_backend && pytest             # backend
+cd 01_frontend && npm test          # frontend
 ```
-
-## Known differences from the Go project
-
-- Kept on purpose (Go behaviour reproduced): refresh tokens use `GOAPP_JWT_ACCESS_EXPIRES`;
-  duplicate email and >72-byte passwords return 500 on register; Postgres list totals
-  (`total_data`, `total_page`) count only the rows on the current page; not-found and bad id on
-  `/data/{slug}/{id}` return 400.
-- Changed:
-  1. `user_tokens` is not registered in the CRUD registry. In Go, any logged-in user can list every
-     user's access and refresh tokens through `/data/user-tokens/`.
-  2. A user without a `user_permissions` row can use the CRUD endpoints (Go panics on a nil
-     type assertion).
-  3. `_pageSize` below 1 falls back to 10 (Go passes a negative limit straight to GORM).
-- Not ported: Go's swagger docs (FastAPI serves `/docs`), nested `user` object inside
-  `user_permissions` rows.

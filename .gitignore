@@ -7,5 +7,5 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
-frontend/node_modules/
-frontend/dist/
+01_frontend/node_modules/
+01_frontend/dist/
